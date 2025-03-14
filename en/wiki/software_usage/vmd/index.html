@@ -3352,6 +3352,15 @@ X Error of failed request:  BadValue (integer parameter out of range for operati
 </code></pre></div>
 <p>即可解决问题</p>
 <p>Ref: https://www.ks.uiuc.edu/Research/vmd/mailing_list/vmd-l/28494.html</p>
+<p>在 XQuartz 2.8.0 版本之后，其配置文件的位置从<code>org.macosforge.xquartz.X11</code>变成了<code>org.xquartz.X11</code>，因此上述的命令应当改为
+<div class="highlight"><pre><span></span><code>defaults write org.xquartz.X11 enable_iglx -bool true
+</code></pre></div></p>
+<p>笔者在Apple Silicon的MAC上使用XQuartz连接服务器涉及<code>OpenGL</code>渲染器的程序时（如<code>vmd</code>）会遇到以下报错：
+<div class="highlight"><pre><span></span><code>libGL error: No matching fbConfigs or visuals found
+libGL error: failed to load driver: swrast
+</code></pre></div>
+经过较为<a href="https://github.com/XQuartz/XQuartz/issues/144">粗浅的调研</a>和linux端，目前将问题定位在<code>mesa</code>的驱动支持部分，或许是Apple Silicon的平台现在不支持<code>mesa</code>的渲染方式。现在还没有影响到正常的使用，但是每次都会有报错。
+在上面的参考中有人给出了在mac下编译对应驱动的<a href="https://github.com/XQuartz/XQuartz/issues/144#issuecomment-1783952222">参考</a>，后续可以考虑进行测试。<del>XQuartz最后一次更新停留在2023年，该跑路了</del></p>
 <h4 id="wsl-vmd">WSL 远程使用 VMD 的注意事项<a class="headerlink" href="#wsl-vmd" title="Permanent link">&para;</a></h4>
 <p>请参阅 <a href="../../cluster_usage/wsl_usage/#vmd">Windows下 WSL 使用简介</a> 中的介绍。</p>
 
@@ -3374,7 +3383,7 @@ X Error of failed request:  BadValue (integer parameter out of range for operati
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="2024年12月11日 02:14:34">2024年12月11日</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="2025年3月14日 12:15:59">2025年3月14日</span>
   </span>
 
     
