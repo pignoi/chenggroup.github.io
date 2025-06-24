@@ -212,6 +212,8 @@ ln -sf /mnt/c/Users/<windows_user>/.ssh/config ~/.ssh/config
 
 具体的安装过程就不再赘述，这里备注几个可以优化docker使用体验的关键词：dockerhub换源、移动docker虚拟磁盘位置、`docker login -u <username>`而不是在Docker Desktop当中点击登录（developer）。
 
+如果是个人电脑的话，不涉及多用户的权限及安全问题，为了比较方便调用docker，可以将本用户加入到docker组当中(`usermod -aG docker <wsl_username>`)，在执行的时候就不需要sudo开头运行docker了。 **需要注意** 这个行为本质上有提权操作，在具体管理时一定要小心权限问题。
+
 这里使用一个简单的[cp2k](https://github.com/cp2k/cp2k-containers)例子（也是编译相对复杂、依赖多的计算软件）对docker的基础使用进行说明：
 ```bash
 docker run -it --rm --shm-size=12g -v $PWD:/mnt -u $(id -u $USER):$(id -g $USER) cp2k/cp2k:2025.1_openmpi_generic_psmp mpirun -bind-to none -np 9 -x OMP_NUM_THREADS=2 cp2k -i input-128.inp
@@ -223,9 +225,11 @@ docker run -it --rm --shm-size=12g -v $PWD:/mnt -u $(id -u $USER):$(id -g $USER)
 - `mpirun -bind-to none -np 9 -x OMP_NUM_THREADS=2`: 这些是mpi运行的相关参数，其中`-x OMP_NUM_THREADS=2`一定要这样设置OpenMP的使用的线程数，直接设置为环境变量不会起作用。如果用的是`mpich`版本的会略有不同，详见上面的github页面。
 - `cp2k -i input-128.inp`: 前面将本地路径挂载到了容器当中，这里就直接使用本地路径下的input文件名称即可。
 
+相较直接下载`cp2k.ssmp`的二进制文件，docker的运行模式可以更好地利用多线程性能，无论是小任务还是简单调试效率都相对更高。
+
 其他的计算软件如`deepmd-kit`也有镜像版本，可以很方便地运行势函数的训练和推理，在不想折腾显卡libtorch环境的时候（特别是dp3.0版本）也不妨为一种好的选择。
 
-容器化的另外一个优势在于能够在架构相同的不同的平台上使用相同的容器运行，目前嘉庚集群和chenggroup集群均安装了`singularity`作为容器化的平台，在使用上和docker大同小异，并且可以将docker的镜像直接转为对应的可执行文件(?)，如有复杂的软件部署需求，可以考虑在本地构建镜像传到集群上运行。
+容器化的另外一个优势在于能够在架构相同的不同的平台上使用相同的容器运行，目前嘉庚集群和chenggroup集群均安装了`singularity`作为容器化的平台，在使用上和docker大同小异，相对docker来说其不需要root权限，是对于普通用户更友好的容器化工具。同时，`sigularity`可以将docker的镜像直接转为对应的可执行文件(?)，如有复杂的软件部署需求，可以考虑在本地构建镜像传到集群上运行。
 
 ## WSL软件安装踩坑（未完待续）
 
