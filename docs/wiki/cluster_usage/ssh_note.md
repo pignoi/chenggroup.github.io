@@ -304,7 +304,7 @@ Host *
 ```bash
 Host elements
     User chenglab
-    Match host elements exec "nc -w 1 -z 10.24.3.144 %p"
+    Match host elements exec "nc -w(linux)/-G(mac) 1 -z 10.24.3.144 %p"
         # Private net IP
         Hostname 10.24.3.144
     Match host elements
@@ -312,7 +312,7 @@ Host elements
         Hostname xxx.xxx.xxx.xxx
         Port 6000
 ```
-此处设置的时候需要谨记上面提到的"First Match Wins."的原则，在遇到具体的问题的时候可以使用`ssh -vvv chenglab`的方法对match的情况进行检查，其中会出现每一条规则匹配或者没有匹配上的具体原因。
+此处设置的时候需要谨记上面提到的"First Match Wins."的原则，在遇到具体的问题的时候可以使用`ssh -vvv elements`的方法对match的情况进行检查，其中会出现每一条规则匹配或者没有匹配上的具体原因。
 
 ## 常见问题
 
