@@ -99,9 +99,11 @@ scp -r -P 7696 kmr@123.45.67.89:/data/home/kmr/directory /some/local/place
 ```
 
 !!! tip
-    注意 `scp` 本身可以看作一个特殊的 `ssh` 命令，因此无论从远程还是本地传输文件都应在本地运行，只是参数的顺序决定了传输的方向。如果两个参数均写本地路径，则与 `cp` 命令的行为相近，但不可均写远程路径。
+    注意 `scp` 本身可以看作一个特殊的 `ssh` 命令，因此无论从远程还是本地传输文件都应在本地运行，只是参数的顺序决定了传输的方向。如果两个参数均写本地路径，则与 `cp` 命令的行为相近。
 
-zsh下 （比如macOS >=10.15版本的默认终端），不能直接使用通配符`*`批量传输文件，需要将包含`*`的字符串用单引号括起。
+    同时，可以将本地作为两个不直接互通的服务器之间的中转站。如在`.ssh/config`文件下配置好两台主机`hostA`和`hostB`，我们可以使用`scp hostA:xxx hostB:xxx`将A主机上的文件直接拷贝到B主机，而不用在本地存储，提高文件传输的效率的同时防止文件占满本地。（这个功能笔者在跨网卡环境下也有尝试成功过。）
+
+zsh下 （比如macOS >=10.15版本的默认终端），不能直接使用通配符`*`批量传输文件，需要将包含`*`的字符串用单引号括起，或者使用反斜杠进行阻止转义`\*`。也可以将`setopt nonomatch`加入到`.zshrc`当中，让`zsh`匹配失败时不报错并使用原本内容。
 
 ## 可选：通过配置 config 优雅地的使用 SSH { #ssh-config }
 
@@ -251,16 +253,6 @@ Host * # (1)!
 以下为 `~/.ssh/config` 的一个示例，需要时可在这份示例文件上进行修改，必要修改的部分已在注释中标出，`General config` 可以直接照抄。注意须删掉文件中所有的注释。
 
 ```bash
-# General config
-Host *
-    ForwardX11Trusted yes
-    ForwardAgent yes
-    AddKeysToAgent yes
-    ServerAliveInterval 60
-    ControlPersist yes
-    ControlMaster auto
-    ControlPath /tmp/%r@%h:%p
-
 # set proxy
 # nickname for your Jump Server
 Host nickname_proxy
@@ -289,7 +281,19 @@ Host nickname_1 nickname_2
     Port 7696
     # use your own nickname
     ProxyJump nickname_proxy
+
+# General config
+Host *
+    ForwardX11Trusted yes
+    ForwardAgent yes
+    AddKeysToAgent yes
+    ServerAliveInterval 60
+    ControlPersist yes
+    ControlMaster auto
+    ControlPath /tmp/%r@%h:%p
 ```
+
+笔者建议将general的部分放在最后进行设置，这是因为ssh在读取`config`文件的时候，会遵循"First Match Wins."的[原则](https://github.com/openssh/openssh-portable/blob/c25c84074a47f700dd6534995b4af4b456927150/readconf.c#L77)，即第一个匹配的非默认设置会从头应用到尾，即使后面有新的相同的设置。如果将默认的*放在开头，就会出现想要让一个`Host`的设置为例外但无法应用的情况。
 
 ## 超纲的部分​​*
 
@@ -300,7 +304,7 @@ Host nickname_1 nickname_2
 ```bash
 Host elements
     User chenglab
-    Match host elements exec "nc -G 4 -z 10.24.3.144 %p"
+    Match host elements exec "nc -w 1 -z 10.24.3.144 %p"
         # Private net IP
         Hostname 10.24.3.144
     Match host elements
@@ -308,6 +312,7 @@ Host elements
         Hostname xxx.xxx.xxx.xxx
         Port 6000
 ```
+此处设置的时候需要谨记上面提到的"First Match Wins."的原则，在遇到具体的问题的时候可以使用`ssh -vvv chenglab`的方法对match的情况进行检查，其中会出现每一条规则匹配或者没有匹配上的具体原因。
 
 ## 常见问题
 
@@ -368,7 +373,11 @@ RSA host key for 104.131.16.158 has changed and you have requested strict checki
 Host key verification failed.
 ```
 
-Take it easy, and just edit your `/Users/isaacalves/.ssh/known_hosts` file to remove the line with the IP address of the very remote host. For some users such as Ubuntu or Debian users, `ssh -R xxx` might be necessary, which would be shown in the error info.
+Take it easy, and just edit your `~/~.ssh/known_hosts` file to remove the line with the IP address of the very remote host. For some users such as Ubuntu or Debian users, `ssh -R xxx` might be necessary, which would be shown in the error info.
 
-However, if not any repair or upgrade happened, **man-in-the-middle attack** might happen. Just stop logging in and contact manager of cluster at once to make sure.
+In the latest SSH versions, the `~/.ssh/known_hosts` file may no longer display specific IP addresses, as sensitive information is encrypted within the `~/.ssh/known_hosts` file. At this point, it is necessary to examine the error message, where the line 
+```Offending RSA key in /Users/isaacalves/.ssh/known_hosts:12```
+identifies the location of the problematic remote host key. This line can be removed using a text editor, after which reconnecting and re-trusting the remote host will allow SSH to retrieve and re-add the host's public key to the file.
+
+** However **, if not any repair or upgrade happened, ** man-in-the-middle attack ** might happen. Just stop logging in and contact manager of cluster at once to make sure.
 
