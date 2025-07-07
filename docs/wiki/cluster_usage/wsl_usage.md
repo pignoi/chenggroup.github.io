@@ -26,16 +26,15 @@ comments: true
 
 终止/重启wsl特定版本的方法，在Powershell/CMD中：
 ```PowerShell
-wsl --shutdown distro_name
+wsl --shutdown <distro_name>
 distro_name    # 启动指定发行版
 ```
 其中`distro_name`为安装的发行版名称，可以通过`wsl -l -v`查看已经安装的发行版。
 
 当然，WSL有着极强的自我管理意识，在WSL中也可以直接实现自闭和重启，这得益于WSL可以直接调用windows下面的程序，只要`wsl.exe`在windows的环境变量当中，就可以实现在wsl中的直接调用：
-`wsl.exe --shutdown distro_name`，然后直接在终端下按回车就可以直接实现重启。
+`wsl.exe --shutdown <distro_name>`，然后直接在终端下按回车就可以直接实现重启。
 
-
-### 将WSL移动到其他分区
+### 将WSL移动到其他盘符
 
 wsl默认安装在C盘下，如果C盘初始分配的相对较小或者有C盘空间焦虑，可以考虑将指定的wsl移动到其他的盘符下。请参考：[轻松搬迁！](https://zhuanlan.zhihu.com/p/621873601)
 
@@ -109,19 +108,20 @@ $ systemctl status wsl-vpnkit         # 查看运行状态
 #### 2. 设置WSL的网络模式为mirrored
 
 !!! warning "注意"  
-    网络映射在wsl新版本中仍为实验性功能，可能存在不稳定的情况。同时旧版本wsl无法使用。实测在EasyConnect环境下延迟很高，经常出现断连的情况。
+    网络映射在wsl新版本中已经转为正式功能，但是实测使用EasyConnect仍然会出现莫名其妙的卡顿，使用体验较为糟糕。同时旧版本wsl无法使用。
+    另：如果想要在WSL中使用ipv6，使用mirrored是一个非常好的选择。
 
 wsl默认的网络模式为NAT，而EasyConnect的工作原理可以简单的理解为建立了一个虚拟网卡和校园网进行沟通，这两种方式并不能进行完美的配合，具有很强的先后运行顺序的关联。而在新版的wsl版本中，提供了一种镜像Windows中所有的网络环境到wsl中的手段，包括系统代理也可以镜像到wsl当中。
 
 首先设置`.wslconfig`文件：
 ```bash
-$ vi /mnt/c/Users/username/.wslconfig
+$ vi /mnt/c/Users/<windows_user>/.wslconfig
 
-[experimental]
+[wsl]
 networkingMode=mirrored
 ```
 
-其中`/mnt/c/Users/username/.wslconfig`是Windows下的用户根目录下的一个wsl配置文件，一般是新创建的。同时，该文件也可以设置wsl占用的系统资源等一些参数。完成编辑保存并退出后，重启wsl发行版就可以实现网卡的映射。可以通过以下的命令进行观察:
+其中`/mnt/c/Users/<windows_user>/.wslconfig`是Windows下的用户根目录下的一个wsl配置文件，一般是新创建的。同时，该文件也可以设置wsl占用的系统资源等一些参数。完成编辑保存并退出后，重启wsl发行版就可以实现网卡的映射。可以通过以下的命令进行观察:
 ```bash
 $ sudo apt install net-tools
 $ ifconfig
@@ -150,13 +150,13 @@ E:\             528G   52G  476G  10% /mnt/e
 ```
 在此处，硬盘被分了三个盘符，均可以直接在WSL中看到，其默认的挂载点是`/mnt/x`，并可以直接通过WSL下的linux命令进行操作，如我想将桌面上的所有python脚本传递到集群上：
 ```bash
-$ scp /mnt/disk/Users/username/Desktop/*py server:~/scripts
+$ scp /mnt/disk/Users/<windows_user>/Desktop/*py server:~/scripts
 ```
-其中`disk`为电脑桌面的所在的盘符（如果没有移动过默认在C盘，则其值为c），`username`为你的电脑用户名（这也是不建议将用户名设置为中文的原因之一，可能会引起错误或者输入不便），`server`可以通过`.ssh/config`进行设置。
+其中`disk`为电脑桌面的所在的盘符（如果没有移动过默认在C盘，则其值为c），`<windows_user>`为你的电脑用户名（这也是不建议将用户名设置为中文的原因之一，可能会引起错误或者输入不便），`server`可以通过`.ssh/config`进行设置。
 
 每次都需要输入这么一长串路径会很麻烦，因为挂载点在启动时并不会改变，因此可以将常用的文件夹映射到`$HOME`下：
 ```bash
-$ ln -sf /mnt/disk/Users/<username>/Desktop $HOME/windows_desktop
+$ ln -sf /mnt/disk/Users/<windows_user>/Desktop $HOME/windows_desktop
 ```
 因为建立的是软链接，因此在Windows中做的改动都会反映在文件当中，不需要反复进行同步。此后就可以直接将`$HOME/windows_desktop`中的文件通过`scp`传递到服务器上了。
 
@@ -177,7 +177,7 @@ C:\wsl_automount.bat(or somewhere u like)
 
 wsl --mount --vhd <route_to_disk> --bare && wsl -d <distro_name>
 
-C:\Users\<username>\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\wsl_startup.vbs
+C:\Users\<windows_user>\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\wsl_startup.vbs
 
 set ws=wscript.CreateObject("wscript.shell")
 ws.run "cmd.exe /c C:\wsl_automount.bat", 0
@@ -187,7 +187,7 @@ ws.run "cmd.exe /c C:\wsl_automount.bat", 0
 
 此后就可以在WSL中的`/etc/fstab`中规定虚拟磁盘的挂载位置（最好使用uuid的方式指定磁盘），或者在`/etc/wsl.conf`中的`[automount]`选项中更改默认的挂载位置，但是这项的更改同样会更改Windows物理磁盘的挂载选项。
 
-### `.ssh/config`文件同步：VSCode使用一致性
+### `.ssh/config`文件同步：VSCode使用一致性*
 
 如果想要在Windows系统中使用VSCode连接远程服务器，就要调整Windows路径下的`.ssh/config`文件进行调整，然而我们平常的终端工作往往在WSL系统中进行，导致两套`.ssh/config`文件不同，这也是造成使用感割裂的原因之一。为了解决这个问题，我们可以考虑将Windows下的`.ssh/config`软链接至`~/.ssh/config`，这样修改时就是同步的。
 
@@ -205,6 +205,31 @@ ln -sf /mnt/c/Users/<windows_user>/.ssh/config ~/.ssh/config
 ```
 
 当然，我们也可以将常用需要使用VSCode的服务器单独列一个`config`文件并在VSCode的设置中进行修改。
+
+## Docker Desktop：简单配置计算软件的利器
+
+如果觉得自己手动配置具体的计算软件太麻烦，或者配置的时候遇到了奇奇怪怪的bug，且在本地运行只是一些短运行的简单的参数检查的需求，不需要极致运行效率，就可以尝试使用容器化的方法对想要实现的功能进行快速的部署。而在WSL中运行docker也很方便，只需要下载一个Docker Desktop，在安装的时候把涉及WSL及其发行版的选项勾选上，启动之后就能够在WSL中调用docker的相关功能（这也是WSL2的优势之处）。
+
+具体的安装过程就不再赘述，这里备注几个可以优化docker使用体验的关键词：dockerhub换源、移动docker虚拟磁盘位置、`docker login -u <username>`而不是在Docker Desktop当中点击登录（developer）。
+
+如果是个人电脑的话，不涉及多用户的权限及安全问题，为了比较方便调用docker，可以将本用户加入到docker组当中(`usermod -aG docker <wsl_username>`)，在执行的时候就不需要sudo开头运行docker了。 **需要注意** 这个行为本质上有提权操作，在具体管理时一定要小心权限问题。
+
+这里使用一个简单的[cp2k](https://github.com/cp2k/cp2k-containers)例子（也是编译相对复杂、依赖多的计算软件）对docker的基础使用进行说明：
+```bash
+docker run -it --rm --shm-size=12g -v $PWD:/mnt -u $(id -u $USER):$(id -g $USER) cp2k/cp2k:2025.1_openmpi_generic_psmp mpirun -bind-to none -np 9 -x OMP_NUM_THREADS=2 cp2k -i input-128.inp
+```
+在运行这条命令之后，会从镜像源下载镜像（这个例子中大概4G）。简要说明下这行命令当中的一些参数：
+- `--shm-size=12g`: 这个是linux中将内存当作硬盘的区域，可以显著提高计算过程中的文件读写速度。在默认设置中通常为整个内存的一半，而在容器当中的默认设置很小，这里需要根据内存大小手动设置一下，一般设为4g以上对于计算速度的影响就比较小了。
+- `-v $PWD:/mnt`: 将当前的目录挂载到容器`/mnt`目录下，cp2k的镜像默认在这个路径下进行计算。所以需要将输入文件中的所有内容都放到当前目录下，主要包括基组文件和色散文件（当然也可以利用`-v`手动挂载到一个地方，对容器比较熟悉的同学可以尝试）。并在input文件中使用相对路径（建议）或者自己转为`/mnt`的绝对路径进行指定。
+- `cp2k/cp2k:2025.1_openmpi_generic_psmp`: 这里制定使用镜像的名称和版本，可以根据自己的需求进行调整，具体的版本可以在docker hub上查询。
+- `mpirun -bind-to none -np 9 -x OMP_NUM_THREADS=2`: 这些是mpi运行的相关参数，其中`-x OMP_NUM_THREADS=2`一定要这样设置OpenMP的使用的线程数，直接设置为环境变量不会起作用。如果用的是`mpich`版本的会略有不同，详见上面的github页面。
+- `cp2k -i input-128.inp`: 前面将本地路径挂载到了容器当中，这里就直接使用本地路径下的input文件名称即可。
+
+相较直接下载`cp2k.ssmp`的二进制文件，docker的运行模式可以更好地利用多线程性能，无论是小任务还是简单调试效率都相对更高。
+
+其他的计算软件如`deepmd-kit`也有镜像版本，可以很方便地运行势函数的训练和推理，在不想折腾显卡libtorch环境的时候（特别是dp3.0版本）也不妨为一种好的选择。
+
+容器化的另外一个优势在于能够在架构相同的不同的平台上使用相同的容器运行，目前嘉庚集群和chenggroup集群均安装了`singularity`作为容器化的平台，在使用上和docker大同小异，相对docker来说其不需要root权限，是对于普通用户更友好的容器化工具。同时，`sigularity`可以将docker的镜像直接转为对应的可执行文件(?)，如有复杂的软件部署需求，可以考虑在本地构建镜像传到集群上运行。
 
 ## WSL软件安装踩坑（未完待续）
 
